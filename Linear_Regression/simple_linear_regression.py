@@ -1,6 +1,6 @@
 from sklearn.datasets import load_boston
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import cross_val_predict, cross_val_score
 import matplotlib.pyplot as plt
 
 
@@ -16,6 +16,8 @@ lr1.fit(lsat, y)
 # cross_val_predict returns an array of the same size as `y` where each entry
 # is a prediction obtained by cross validation:
 predicted = cross_val_predict(lr1, lsat, y, cv=10)
+scores = cross_val_score(lr1, lsat, y, cv=10)
+print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 
 fig, ax = plt.subplots()
 ax.scatter(y, predicted, edgecolors=(0, 0, 0))  # predicted values

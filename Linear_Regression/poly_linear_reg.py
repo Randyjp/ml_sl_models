@@ -1,21 +1,26 @@
 from sklearn.datasets import load_boston
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import cross_val_predict, cross_val_score
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 # load the data set we'll be working with. In this case the Boston housing
 boston = load_boston()
-boston_df = pd.DataFrame(data=boston.data, columns=boston.feature_names) # get it into a pandas data frame
-y = pd.DataFrame(data=boston.data) # get it into a pandas data frame
-X = boston_df[['LSTAT', 'AGE']]
+boston_df = pd.DataFrame(data=boston.data, columns=boston.feature_names)  # get it into a pandas data frame
+y = pd.DataFrame(data=boston.data)  # get it into a pandas data frame
+X = boston_df['LSTAT'].reshape(-1, 1)  # predictor variable
 # boston_df.describe() # take a look at the data
-boston = None # help garbage collector
+boston = None  # help garbage collector
 
-# Task 2) make a linear regression model with LSTAT+AGE to predict median value
+# Task 4) make a polynomial linear regression model with LSTAT and LSTAT^2 to predict median value
+poly_features = PolynomialFeatures(degree=2, include_bias=False) # set the degree of new p's = 2
+poly_X = poly_features.fit_transform(X) # creates the LSTAT^2
+
 lr1 = LinearRegression()  # create the object
-lr1.fit(X, y)
+lr1.fit(poly_X, y)
+# print(lr1.coef_)
+# print(lr1.intercept_)
 
 # cross_val_predict returns an array of the same size as `y` where each entry
 # is a prediction obtained by cross validation:
