@@ -1,6 +1,6 @@
 # Statistical and Machine learning models
 
-In this project I'm exploring sample data by applying the most popular classification, regression and clustering algorithms.
+In this project I'm exploring data by applying the most popular classification, regression and clustering algorithms.
 The main goal is getting exposure to as many models as I can to increase the scope of my ML/SL toolbox.   
 
 ### Prerequisites
