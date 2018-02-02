@@ -2,7 +2,6 @@ from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 from sklearn.model_selection import cross_val_predict, train_test_split
-
 # let's try to identify Iris-Virginica(targe = 2) just by using petal width feature.
 # This is a basic example of single class classification
 
@@ -14,7 +13,7 @@ y = iris_np.target
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.35)
 
 # fit out model but since we now have 4 predictors we need to use a generalized model of the logistic
-# regression, called Softmax regression. Set the multi_class hyper-parameter to multi-nomial. Moreover,
+# regression, called Softmax regression. Set the multi_class hyper-parameter to "multinomial". Moreover,
 # we need a solver that supports softmax, like lbfgs
 softmax = LogisticRegression(multi_class='multinomial', solver='lbfgs', random_state=42)
 softmax.fit(X_train, y_train)
