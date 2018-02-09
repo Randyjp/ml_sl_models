@@ -6,11 +6,13 @@ import matplotlib.pyplot as plt
 from Titanic.dataframe_selector import DataFrameSelector
 from Titanic.CategoricalEncoder import CategoricalEncoder
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.preprocessing import Imputer , StandardScaler
+from sklearn.preprocessing import Imputer, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score, GridSearchCV
 
 TRAIN_FILE_PATH = './data/train_titanic.csv'
 TEST_FILE_PATH = './data/test_titanic.csv'
-RANDOM_SEEM = 42
+RANDOM_SEED = 42
 
 
 def read_data(path):
@@ -54,13 +56,15 @@ def fill_missing_with_median(data, column=None):
 
 X = read_data(TRAIN_FILE_PATH)
 X.dropna(subset=['Embarked'], inplace=True)
-y = X.Survived  # get the response variable
+# y = 'Yes' if X.Survived.all() == 1 else 'No'  # get the response variable
+y = X.Survived.apply(lambda x: 'Yes' if x == 1 else 'No')  # get the response variable
 # name: not important
 # Ticket: remove for now, it's very inconsistent. Don't know what to do
 # Cabin:  Remove, only first class passengers have cabin
 columns_to_remove = ['Survived', 'Name', 'Ticket', 'Cabin', 'PassengerId']
 categorical_columns = ['Embarked', 'Sex', 'Pclass']
 X = remove_columns(X, columns_to_remove)
+X_labels = X.columns
 X_numeric = remove_columns(X, categorical_columns)
 numeric_columns = list(X_numeric)
 
@@ -84,4 +88,24 @@ cleaned_data = pipeline.fit_transform(X)
 # fill_missing_with_median(X, 'Age')  # fill age with the median value of the column
 # ds = DataFrameSelector(categorical_columns)
 # X = ds.fit_transform(X)
+
+# random_class = RandomForestClassifier()
+# fit = random_class.fit(cleaned_data, y)
+# score = cross_val_score(fit, cleaned_data, y, cv=10)
+
+# param_grid = [
+#     {'n_estimators': [5, 10, 15, 20, 25], 'max_features': [2, 4, 6, 8, 10]},
+#     {'bootstrap': [False], 'n_estimators': [5, 10, 15, 20, 25], 'max_features': [2, 4, 6, 8, 10]},
+# ]
+#
+# grid = GridSearchCV(random_class, param_grid, scoring='accuracy', cv=10)
+# grid.fit(cleaned_data, y)
+# print(grid.best_params_)
+
+random_class = RandomForestClassifier(max_features=8, n_estimators=20, random_state=RANDOM_SEED)
+fit = random_class.fit(cleaned_data, y)
+score = cross_val_score(fit, cleaned_data, y, cv=10)
+
+
+#predict
 
