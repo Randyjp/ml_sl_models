@@ -31,81 +31,76 @@ def plot_histogram(data):
     plt.show()
 
 
-def fill_missing_with_median(data, column=None):
-    imputer = Imputer(strategy='median')
+def transform_data_pipe(data, numeric_columns, categorical_columns):
+    numeric_pipeline = Pipeline([
+        ('selector', DataFrameSelector(numeric_columns)),
+        ('imputer', Imputer(strategy='median')),
+        ('scaler', StandardScaler()),
+    ])
 
-    if not column:
-        imputer.fit(data)
-        new_data = imputer.transform(data)
-        return pd.DataFrame(new_data, columns=data.columns)
-    else:
-        temp_data = data[column].values.reshape(-1, 1)
-        imputer.fit(temp_data)
-        new_data = imputer.transform(temp_data)
-        new_data_df = pd.DataFrame(new_data, columns=[column])
-        data[column] = new_data_df
-        return data
+    categorical_pipeline = Pipeline([
+        ('selector', DataFrameSelector(categorical_columns)),
+        ('cat_encoder', CategoricalEncoder(encoding="onehot-dense")),
+    ])
+
+    pipeline = FeatureUnion(transformer_list=[
+        ('numeric_pipeline', numeric_pipeline),
+        ('categorical_pipeline', categorical_pipeline),
+    ])
+
+    cleaned_data = pipeline.fit_transform(data)
+
+    return cleaned_data
 
 
-# def encode_categorical(data, column):
-#     label_encoder = LabelBinarizer()
-#     encoded_column = label_encoder.fit_transform(data[column])
-#     data[column] = encoded_column
-#     return encoded_column
+def random_forest_grid(X, y, params):
+    random_forest = RandomForestClassifier()
+    grid = GridSearchCV(random_forest, params, scoring='accuracy', cv=10)
+    grid_fit = grid.fit(X, y)
+    return grid_fit.best_params_
 
 
 X = read_data(TRAIN_FILE_PATH)
 X.dropna(subset=['Embarked'], inplace=True)
-# y = 'Yes' if X.Survived.all() == 1 else 'No'  # get the response variable
-y = X.Survived.apply(lambda x: 'Yes' if x == 1 else 'No')  # get the response variable
+y = X.Survived  # get the response variable
+# y = X.Survived.apply(lambda x: 'Yes' if x == 1 else 'No')  # get the response variable
 # name: not important
 # Ticket: remove for now, it's very inconsistent. Don't know what to do
 # Cabin:  Remove, only first class passengers have cabin
 columns_to_remove = ['Survived', 'Name', 'Ticket', 'Cabin', 'PassengerId']
-categorical_columns = ['Embarked', 'Sex', 'Pclass']
+cat_columns = ['Embarked', 'Sex', 'Pclass']
 X = remove_columns(X, columns_to_remove)
 X_labels = X.columns
-X_numeric = remove_columns(X, categorical_columns)
-numeric_columns = list(X_numeric)
+X_numeric = remove_columns(X, cat_columns)
+num_columns = list(X_numeric)
 
-numeric_pipeline = Pipeline([
-    ('selector', DataFrameSelector(numeric_columns)),
-    ('imputer', Imputer(strategy='median')),
-    ('scaler', StandardScaler()),
-])
+param_grid = [
+    {'n_estimators': [5, 10, 15, 20, 25], 'max_features': [2, 4, 6, 8, 10]},
+    {'bootstrap': [False], 'n_estimators': [5, 10, 15, 20, 25], 'max_features': [2, 4, 6, 8, 10]},
+]
 
-categorical_pipeline = Pipeline([
-    ('selector', DataFrameSelector(categorical_columns)),
-    ('cat_encoder', CategoricalEncoder(encoding="onehot-dense")),
-])
+transformed_data = transform_data_pipe(X, num_columns, cat_columns)
+rf_params = random_forest_grid(transformed_data, y, param_grid)
 
-pipeline = FeatureUnion(transformer_list=[
-    ('numeric_pipeline', numeric_pipeline),
-    ('categorical_pipeline', categorical_pipeline),
-])
+random_for = RandomForestClassifier(max_features=rf_params['max_features'], n_estimators=rf_params['n_estimators'],
+                                    random_state=RANDOM_SEED)
+random_for.fit(transformed_data, y)
 
-cleaned_data = pipeline.fit_transform(X)
-# fill_missing_with_median(X, 'Age')  # fill age with the median value of the column
-# ds = DataFrameSelector(categorical_columns)
-# X = ds.fit_transform(X)
-
-# random_class = RandomForestClassifier()
+# random_class = RandomForestClassifier(max_features=8, n_estimators=20, random_state=RANDOM_SEED)
 # fit = random_class.fit(cleaned_data, y)
 # score = cross_val_score(fit, cleaned_data, y, cv=10)
 
-# param_grid = [
-#     {'n_estimators': [5, 10, 15, 20, 25], 'max_features': [2, 4, 6, 8, 10]},
-#     {'bootstrap': [False], 'n_estimators': [5, 10, 15, 20, 25], 'max_features': [2, 4, 6, 8, 10]},
-# ]
-#
-# grid = GridSearchCV(random_class, param_grid, scoring='accuracy', cv=10)
-# grid.fit(cleaned_data, y)
-# print(grid.best_params_)
+# predict
+X_test = read_data(TEST_FILE_PATH)
+passenger_id = X_test.PassengerId
 
-random_class = RandomForestClassifier(max_features=8, n_estimators=20, random_state=RANDOM_SEED)
-fit = random_class.fit(cleaned_data, y)
-score = cross_val_score(fit, cleaned_data, y, cv=10)
+X_test = remove_columns(X_test, columns_to_remove[1:-1])
+transformed_test_data = transform_data_pipe(X_test, num_columns, cat_columns)
+predicted = random_for.predict(transformed_test_data)
+predicted_series = pd.Series(predicted)
 
-
-#predict
-
+df = pd.DataFrame()
+df['PassengerId'] = passenger_id
+df['Survived'] = predicted_series
+df.to_csv('results.csv', columns=['PassengerId', 'Survived'], index=False)
+print('mgg')
