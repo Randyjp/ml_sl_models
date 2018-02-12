@@ -103,4 +103,3 @@ df = pd.DataFrame()
 df['PassengerId'] = passenger_id
 df['Survived'] = predicted_series
 df.to_csv('results.csv', columns=['PassengerId', 'Survived'], index=False)
-print('mgg')
