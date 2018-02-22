@@ -12,43 +12,40 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
+
 def read_data(path):
     if not os.path.exists(path):
         raise FileNotFoundError("The file you are trying to access does not exist")
     return pd.read_csv(path, header=0, )
 
 
-def remove_columns(data_sets, columns_list):
-    for df in data_sets:
-        df.drop(columns=columns_list, axis=1, inplace=True)
+def remove_columns(data_set, columns_list):
+    data_set.drop(columns=columns_list, axis=1, inplace=True)
 
 
-def fill_missing_values(data_sets, column, strategy='custom', value=None):
-    for df in data_sets:
-        if df[column].dtype == 'object':
-            if strategy == 'mode':
-                df[column] = df[column].fillna(df[column].value_counts().idxmax())
-            elif strategy == 'custom' and value is not None:
-                df[column] = df[column].fillna(value)
-        elif df[column].dtype == 'int64' or df[column].dtype == 'float64':
-            if strategy == 'mode':
-                df[column] = df[column].fillna(df[column].mode())
-            elif strategy == 'median' and value is not None:
-                df[column] = df[column].fillna(df[column].median())
-            elif strategy == 'custom' and value is not None:
-                df[column] = df[column].fillna(value)
+def fill_missing_values(data_set, column, strategy='custom', value=None):
+    if data_set[column].dtype == 'object':
+        if strategy == 'mode':
+            data_set[column].fillna(data_set[column].value_counts().idxmax(), inplace=True)
+        elif strategy == 'custom' and value is not None:
+            data_set[column].fillna(value, inplace=True)
+    elif data_set[column].dtype == 'int64' or data_set[column].dtype == 'float64':
+        if strategy == 'mode':
+            data_set[column].fillna(data_set[column].mode(), inplace=True)
+        elif strategy == 'median':
+            data_set[column].fillna(data_set[column].median(), inplace=True)
+        elif strategy == 'custom' and value is not None:
+            data_set[column].fillna(value, inplace=True)
 
 
-def create_dummy_variables(data_sets, columns_names):
-    for i in range(len(data_sets)):
-        data_sets[i] = pd.get_dummies(data_sets[i], columns=columns_names, prefix=columns_names)
+def create_dummy_variables(data_set, columns_names):
+    return pd.get_dummies(data_set, columns=columns_names, prefix=columns_names, sparse=False)
 
-def scale_data(data_sets):
+
+def scale_data(data_set):
     scaler = StandardScaler()
-    scaler.fit(data_sets[0] + data_sets[1])
-
-    for df in data_sets:
-        scaler.transform(df)
+    scaler.fit(data_set)
+    return scaler.transform(data_set)
 
 
 # script constants
@@ -59,36 +56,58 @@ TEST_PATH = './data/test.csv'
 X = read_data(TRAIN_PATH)
 y = X.SalePrice
 X.drop('SalePrice', axis=1, inplace=True)
-test = read_data(TEST_PATH)
-all_data = [X, test]
-
+X_test = read_data(TEST_PATH)
+all_data = pd.concat([X, X_test])
+ids = all_data.Id
+# train_test = pd.concat(X, X_test)
 # columns to remove from model
 # dropping the ones that have more than 50% missing values
 columns_to_drop = ['Fence', 'Id', 'Alley', 'PoolQC', 'MiscFeature']
 remove_columns(all_data, columns_to_drop)
 
 # fill missing values
-fill_missing_values(all_data, 'FireplaceQu', strategy='custom', value='None')
+fill_missing_values(all_data, 'FireplaceQu', strategy='custom', value='Nada')
 fill_missing_values(all_data, 'LotFrontage', strategy='median')
 fill_missing_values(all_data, 'MasVnrType', strategy='mode')
-fill_missing_values(all_data, 'MasVnrArea', strategy='mode')
+fill_missing_values(all_data, 'MasVnrArea', strategy='custom', value=0.0)  # they have not MasVnr, fill are with 0
 fill_missing_values(all_data, 'BsmtQual', strategy='mode')
 fill_missing_values(all_data, 'BsmtCond', strategy='mode')
 fill_missing_values(all_data, 'BsmtExposure', strategy='mode')
 fill_missing_values(all_data, 'BsmtFinType1', strategy='mode')
 fill_missing_values(all_data, 'BsmtFinType2', strategy='mode')
 fill_missing_values(all_data, 'Electrical', strategy='mode')
-fill_missing_values(all_data, 'GarageType', strategy='custom', value='None')
+fill_missing_values(all_data, 'GarageType', strategy='custom', value='Nada')
 fill_missing_values(all_data, 'GarageYrBlt', strategy='custom', value=0000)  # fill with year 0000
-fill_missing_values(all_data, 'GarageFinish', strategy='custom', value='None')
-fill_missing_values(all_data, 'GarageQual', strategy='custom', value='None')
-fill_missing_values(all_data, 'GarageCond', strategy='custom', value='None')
+fill_missing_values(all_data, 'GarageFinish', strategy='custom', value='Nada')
+fill_missing_values(all_data, 'GarageQual', strategy='custom', value='Nada')
+fill_missing_values(all_data, 'GarageCond', strategy='custom', value='Nada')
+#### test set ###
+fill_missing_values(all_data, 'MSZoning', strategy='mode')
+fill_missing_values(all_data, 'Functional', strategy='mode')
+fill_missing_values(all_data, 'BsmtFinSF2', strategy='custom', value=0)
+fill_missing_values(all_data, 'BsmtFinSF1', strategy='custom', value=0)
+fill_missing_values(all_data, 'TotalBsmtSF', strategy='custom', value=0)
+fill_missing_values(all_data, 'BsmtFullBath', strategy='custom', value=0)
+fill_missing_values(all_data, 'BsmtHalfBath', strategy='custom', value=0)
+fill_missing_values(all_data, 'BsmtUnfSF', strategy='custom', value=0)
+fill_missing_values(all_data, 'GarageArea', strategy='custom', value=0)
+fill_missing_values(all_data, 'GarageCars', strategy='custom', value=0)
+fill_missing_values(all_data, 'Utilities', strategy='mode')
+fill_missing_values(all_data, 'SaleType', strategy='mode')
+fill_missing_values(all_data, 'Exterior2nd', strategy='mode')
+fill_missing_values(all_data, 'Exterior1st', strategy='mode')
+fill_missing_values(all_data, 'KitchenQual', strategy='mode')
 
 # One hot encoding
-cat_cols = set(X.select_dtypes(include=['object']).columns)
-num_cols = set(X.columns) - cat_cols
+cat_cols = set(all_data.select_dtypes(include=['object']).columns)
+num_cols = set(all_data.columns) - cat_cols
 
-create_dummy_variables(all_data, list(cat_cols))
+all_data = create_dummy_variables(all_data, list(cat_cols))
+all_cols = list(all_data.columns)
+# scale predictors
+all_data = pd.DataFrame(data=scale_data(all_data), columns=all_cols, index=ids)
+X = all_data[0:1460]
+X_test = all_data[1460:-1]
+all_data = None
 
-#scale predictors
-scale_data(all_data)
+# Lasso
