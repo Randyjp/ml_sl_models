@@ -11,6 +11,9 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LassoCV, RidgeCV, ElasticNetCV
+from sklearn.model_selection import train_test_split, cross_val_score, cross_val_predict
+
 
 
 def read_data(path):
@@ -52,6 +55,8 @@ def scale_data(data_set):
 RANDOM_SEED = 42
 TRAIN_PATH = './data/train.csv'
 TEST_PATH = './data/test.csv'
+RESULT_PATH = './data/result.csv'
+
 
 X = read_data(TRAIN_PATH)
 y = X.SalePrice
@@ -59,7 +64,7 @@ X.drop('SalePrice', axis=1, inplace=True)
 X_test = read_data(TEST_PATH)
 all_data = pd.concat([X, X_test])
 ids = all_data.Id
-# train_test = pd.concat(X, X_test)
+test_ids = X_test.Id
 # columns to remove from model
 # dropping the ones that have more than 50% missing values
 columns_to_drop = ['Fence', 'Id', 'Alley', 'PoolQC', 'MiscFeature']
@@ -107,7 +112,28 @@ all_cols = list(all_data.columns)
 # scale predictors
 all_data = pd.DataFrame(data=scale_data(all_data), columns=all_cols, index=ids)
 X = all_data[0:1460]
-X_test = all_data[1460:-1]
+X_test = all_data[1460:]
 all_data = None
 
 # Lasso
+lasso = LassoCV(cv=10, random_state=RANDOM_SEED)
+lasso_fitted = lasso.fit(X, y)
+lasso_score = lasso.score(X, y)
+
+# ridge
+ridge = LassoCV(cv=10, random_state=RANDOM_SEED)
+ridge_fitted = ridge.fit(X, y)
+ridge_score = ridge.score(X, y)
+
+# elastic ne
+elastic = ElasticNetCV(cv=10, random_state=RANDOM_SEED)
+elastic_fitted = elastic.fit(X, y)
+elastic_score = ridge.score(X, y)
+
+
+#predict
+predicted = lasso_fitted.predict(X_test)
+result = pd.DataFrame()
+result['Id'] = test_ids
+result['SalePrice'] = predicted
+result.to_csv(RESULT_PATH, columns=['Id', 'SalePrice'], index=False)
