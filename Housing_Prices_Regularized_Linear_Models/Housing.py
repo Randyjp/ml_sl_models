@@ -54,7 +54,7 @@ def scale_data(data_set):
 
 def visualize(data_set):
     # sea born histogram
-    sns.distplot(data_set.SalePrice)
+    sns.distplot(data_set['SalePrice'])
 
     # correlation matrix
     corr_mat = data_set.corr()
@@ -86,7 +86,6 @@ X = read_data(TRAIN_PATH)
 visualize(X) # make so graphs to see what's going on
 y = X.SalePrice
 X.drop('SalePrice', axis=1, inplace=True)
-visualize(X, y)
 X_test = read_data(TEST_PATH)
 all_data = pd.concat([X, X_test])
 ids = all_data.Id
@@ -140,7 +139,7 @@ all_data = pd.DataFrame(data=scale_data(all_data), columns=all_cols, index=ids)
 X = all_data[0:1460]
 X_test = all_data[1460:]
 all_data = None
-
+# TODO: NORMALIZE features, drop more features. play with parms
 # Lasso
 lasso = LassoCV(cv=10, random_state=RANDOM_SEED)
 lasso_fitted = lasso.fit(X, y)
