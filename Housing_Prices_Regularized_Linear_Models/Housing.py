@@ -6,14 +6,15 @@
 * Metric: Submissions are evaluated on Root-Mean-Squared-Error (RMSE) between the logarithm of the predicted value
   and the logarithm of the observed sales price.
 * Approach: I'm going to tackle this problem using regularized linear models: Ridge, Lasso and Elastic net
+* visualizations: https://www.kaggle.com/pmarcelino/comprehensive-data-exploration-with-python/notebook
 """
 import os
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LassoCV, RidgeCV, ElasticNetCV
-from sklearn.model_selection import train_test_split, cross_val_score, cross_val_predict
-
 
 
 def read_data(path):
@@ -51,16 +52,41 @@ def scale_data(data_set):
     return scaler.transform(data_set)
 
 
+def visualize(data_set):
+    # sea born histogram
+    sns.distplot(data_set.SalePrice)
+
+    # correlation matrix
+    corr_mat = data_set.corr()
+    f, ax = plt.subplots(figsize=(12, 9))
+    sns.heatmap(corr_mat, vmax=.8, square=True)
+
+    # sale price correlation matrix
+    k = 10 # 10 most correlated variables to sale price
+    cols = corr_mat.nlargest(k, 'SalePrice')['SalePrice'].index
+    cm = np.corrcoef(data_set[cols].values.T)
+    sns.set(font_scale=1.25)
+    hm = sns.heatmap(cm ,cbar=True, annot=True, square=True, fmt='.2f', annot_kws={'size': 10, },
+                     yticklabels=cols.values, xticklabels=cols.values)
+
+    # scatter plots
+    sns.set()
+    cols = ['SalePrice', 'OverallQual', 'GrLivArea', 'GarageCars', 'TotalBsmtSF', 'FullBath', 'YearBuilt']
+    sns.pairplot(data_set[cols], size=2.5)
+
+    plt.show()
+
+
 # script constants
 RANDOM_SEED = 42
 TRAIN_PATH = './data/train.csv'
 TEST_PATH = './data/test.csv'
-RESULT_PATH = './data/result.csv'
-
 
 X = read_data(TRAIN_PATH)
+visualize(X) # make so graphs to see what's going on
 y = X.SalePrice
 X.drop('SalePrice', axis=1, inplace=True)
+visualize(X, y)
 X_test = read_data(TEST_PATH)
 all_data = pd.concat([X, X_test])
 ids = all_data.Id
@@ -121,7 +147,7 @@ lasso_fitted = lasso.fit(X, y)
 lasso_score = lasso.score(X, y)
 
 # ridge
-ridge = LassoCV(cv=10, random_state=RANDOM_SEED)
+ridge = RidgeCV(cv=10)
 ridge_fitted = ridge.fit(X, y)
 ridge_score = ridge.score(X, y)
 
@@ -130,10 +156,17 @@ elastic = ElasticNetCV(cv=10, random_state=RANDOM_SEED)
 elastic_fitted = elastic.fit(X, y)
 elastic_score = ridge.score(X, y)
 
-
-#predict
+# predict_lasso
 predicted = lasso_fitted.predict(X_test)
 result = pd.DataFrame()
 result['Id'] = test_ids
 result['SalePrice'] = predicted
-result.to_csv(RESULT_PATH, columns=['Id', 'SalePrice'], index=False)
+# result.to_csv('./data/result_lasso.csv', columns=['Id', 'SalePrice'], index=False)
+
+
+# predict ridge
+predicted_ridge = ridge_fitted.predict(X_test)
+result_ridge = pd.DataFrame()
+result_ridge['Id'] = test_ids
+result_ridge['SalePrice'] = predicted_ridge
+# result_ridge.to_csv('./data/result_ridge.csv', columns=['Id', 'SalePrice'], index=False)
